@@ -1145,152 +1145,143 @@ export function AvatarBuilderPage() {
               Define your character's weapons and armor. These will be available during combat.
             </p>
 
-        {/* Weapons */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-white">Weapons</h3>
-            <button
-              onClick={() => {
-                setEditingWeapon(null);
-                setShowWeaponEditor(true);
-              }}
-              className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded font-medium text-sm"
-            >
-              + Add Weapon
-            </button>
-          </div>
-
-          {character.weapons.length === 0 && !showWeaponEditor && (
-            <div className="text-center py-8 bg-slate-700/30 rounded">
-              <div className="text-slate-500 text-sm">No weapons added yet.</div>
-              <div className="text-slate-600 text-xs mt-1">Add weapons to use in combat.</div>
-            </div>
-          )}
-
-          {character.weapons.map(weapon => (
-            <div key={weapon.id} className="bg-slate-700/50 rounded p-3 mb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-white font-medium">{weapon.name}</div>
-                  <div className="text-xs text-slate-400">
-                    {weapon.category} • {weapon.handedness}
-                    {weapon.attacks.length > 0 && ` • ${weapon.attacks.length} attack${weapon.attacks.length > 1 ? 's' : ''}`}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingWeapon(weapon);
-                      setShowWeaponEditor(true);
-                    }}
-                    className="text-amber-400 hover:text-amber-300 text-sm"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => character.removeWeapon(weapon.id)}
-                    className="text-red-400 hover:text-red-300 text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-              
-              {/* Attack summary */}
-              {weapon.attacks.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {weapon.attacks.map(attack => {
-                    const penValue = typeof attack.penetration === 'number' 
-                      ? attack.penetration 
-                      : Array.isArray(attack.penetration) 
-                        ? attack.penetration[0] 
-                        : 0;
-                    return (
-                      <span key={attack.id} className="bg-slate-600 rounded px-2 py-1 text-xs text-slate-300">
-                        {ASPECTS.find(a => a.id === attack.aspect)?.emoji} {attack.magnitude} {attack.type}
-                        {penValue > 0 && ` (Pen ${attack.penetration})`}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-              
-              {/* Tags */}
-              {(() => {
-                const refs: WeaponTagRef[] = weapon.tags ?? idsToRefs(weapon.tagIds ?? []);
-                if (refs.length === 0) return null;
-                return (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {refs.map(ref => {
-                      const resolved = resolveTagRef(ref, character.customTags);
-                      return resolved ? (
-                        <TagChip 
-                          key={ref.tagId} 
-                          tag={resolved.def} 
-                          x={resolved.x} 
-                          size="sm" 
-                        />
-                      ) : null;
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          ))}
-        </div>
-
-        {/* Weapon Editor Modal */}
-        {showWeaponEditor && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            onClick={() => {
-              setShowWeaponEditor(false);
-              setEditingWeapon(null);
-            }}
-          >
-            <div
-              className="bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="sticky top-0 bg-slate-800 border-b border-slate-700 px-6 py-3 flex items-center justify-between rounded-t-lg z-10">
-                <h3 className="text-white font-bold">
-                  {editingWeapon ? `Edit ${editingWeapon.name}` : 'Add Weapon'}
-                </h3>
+            {/* Weapons */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-white">Weapons</h3>
                 <button
                   onClick={() => {
-                    setShowWeaponEditor(false);
                     setEditingWeapon(null);
+                    setShowWeaponEditor(true);
                   }}
-                  className="text-slate-400 hover:text-white text-xl"
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                 >
-                  ✕
+                  + Add Weapon
                 </button>
               </div>
-              <div className="p-6">
-                <WeaponEditor
-                  weapon={editingWeapon || undefined}
-                  customTags={character.customTags}
-                  onSave={(weaponData, newCustomTags) => {
-                    if (newCustomTags.length > 0) {
-                      character.setCustomTags(prev => [...prev, ...newCustomTags]);
-                    }
-                    if (editingWeapon) {
-                      character.updateWeapon(editingWeapon.id, weaponData);
-                    } else {
-                      character.addWeapon(weaponData);
-                    }
-                    setShowWeaponEditor(false);
-                    setEditingWeapon(null);
-                  }}
-                  onCancel={() => {
-                    setShowWeaponEditor(false);
-                    setEditingWeapon(null);
-                  }}
-                />
-              </div>
+
+              {character.weapons.length === 0 && !showWeaponEditor && (
+                <div className="text-center py-8 bg-slate-700/30 rounded">
+                  <div className="text-slate-500 text-sm">No weapons added yet.</div>
+                  <div className="text-slate-600 text-xs mt-1">Add weapons to use in combat.</div>
+                </div>
+              )}
+
+              {character.weapons.map(weapon => (
+                <div key={weapon.id} className="bg-slate-700/50 rounded p-3 mb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-white font-medium">{weapon.name}</div>
+                      <div className="text-xs text-slate-400">
+                        {weapon.category} • {weapon.handedness}
+                        {weapon.attacks.length > 0 && ` • ${weapon.attacks.length} attack${weapon.attacks.length > 1 ? 's' : ''}`}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingWeapon(weapon);
+                          setShowWeaponEditor(true);
+                        }}
+                        className="text-amber-400 hover:text-amber-300 text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => character.removeWeapon(weapon.id)}
+                        className="text-red-400 hover:text-red-300 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Attack summary */}
+                  {weapon.attacks.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {weapon.attacks.map(attack => {
+                        const penValue = typeof attack.penetration === 'number' 
+                          ? attack.penetration 
+                          : Array.isArray(attack.penetration) 
+                            ? attack.penetration[0] 
+                            : 0;
+                        return (
+                          <span key={attack.id} className="bg-slate-600 rounded px-2 py-1 text-xs text-slate-300">
+                            {ASPECTS.find(a => a.id === attack.aspect)?.emoji} {attack.magnitude} {attack.type}
+                            {penValue > 0 && ` (Pen ${attack.penetration})`}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  
+                  {/* Tags */}
+                  {(() => {
+                    const refs: WeaponTagRef[] = weapon.tags ?? idsToRefs(weapon.tagIds ?? []);
+                    if (refs.length === 0) return null;
+                    return (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {refs.map(ref => {
+                          const resolved = resolveTagRef(ref, character.customTags);
+                          return resolved ? (
+                            <TagChip 
+                              key={ref.tagId} 
+                              tag={resolved.def} 
+                              x={resolved.x} 
+                              size="sm" 
+                            />
+                          ) : null;
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              ))}
             </div>
-          </div>
-        )}
+
+            {/* Weapon Editor Modal */}
+            {showWeaponEditor && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                <div className="bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="sticky top-0 bg-slate-800 border-b border-slate-700 px-6 py-3 flex items-center justify-between rounded-t-lg z-10">
+                    <h3 className="text-white font-bold">
+                      {editingWeapon ? `Edit ${editingWeapon.name}` : 'Add Weapon'}
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setShowWeaponEditor(false);
+                        setEditingWeapon(null);
+                      }}
+                      className="text-slate-400 hover:text-white text-xl"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <WeaponEditor
+                      weapon={editingWeapon || undefined}
+                      customTags={character.customTags}
+                      onSave={(weaponData, newCustomTags) => {
+                        if (newCustomTags.length > 0) {
+                          character.setCustomTags(prev => [...prev, ...newCustomTags]);
+                        }
+                        if (editingWeapon) {
+                          character.updateWeapon(editingWeapon.id, weaponData);
+                        } else {
+                          character.addWeapon(weaponData);
+                        }
+                        setShowWeaponEditor(false);
+                        setEditingWeapon(null);
+                      }}
+                      onCancel={() => {
+                        setShowWeaponEditor(false);
+                        setEditingWeapon(null);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Armor */}
             <div className="mb-6">
