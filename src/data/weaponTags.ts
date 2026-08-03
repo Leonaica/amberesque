@@ -1,4 +1,4 @@
-import type { WeaponTagDefinition } from '../types/character';
+import type { WeaponTagDefinition, WeaponTagRef } from '../types/character';
 
 export const WEAPON_TAG_CATEGORIES = [
   'Inherent',
@@ -56,25 +56,12 @@ export const WEAPON_TAG_LIBRARY: WeaponTagDefinition[] = [
     effect: '-2 to physical actions while wielded due to weight/awkwardness',
   },
   {
-    id: 'tag-blast-s',
-    label: 'Blast (small)',
+    id: 'tag-blast',
+    label: 'Blast',
     category: 'Inherent',
-    description: 'Area-effect weapon',
-    effect: 'Attack hits all targets within Close range (2m) of impact point; roll separately for each',
-  },
-  {
-    id: 'tag-blast-m',
-    label: 'Blast (medium)',
-    category: 'Inherent',
-    description: 'Area-effect weapon',
-    effect: 'Attack hits all targets within Reach range (5m) of impact point; roll separately for each',
-  },
-  {
-    id: 'tag-blast-l',
-    label: 'Blast (large)',
-    category: 'Inherent',
-    description: 'Area-effect weapon',
-    effect: 'Attack hits all targets within Short range (50m) of impact point; roll separately for each',
+    description: 'Area-effect weapon; X is the blast radius in meters',
+    effect: 'Attack hits all targets within {x}m of impact point; roll separately for each',
+    variable: { min: 1, max: 100, default: 2, step: 1 },
   },
   {
     id: 'tag-silvered',
@@ -127,15 +114,17 @@ export const WEAPON_TAG_LIBRARY: WeaponTagDefinition[] = [
     id: 'tag-devastating',
     label: 'Devastating',
     category: 'Inherent',
-    description: 'particularly deadly with critical hits',
-    effect: '+4 damage per Raise',
+    description: 'Particularly deadly with critical hits',
+    effect: '+{x} damage per Raise',
+    variable: { min: 6, max: 20, default: 6, step: 2 },
   },
   {
     id: 'tag-felling',
     label: 'Felling',
     category: 'Inherent',
-    description: 'makes a mockery of even the most resilient enemies, cutting dense tissue and bone with ease',
-    effect: 'Ignores enemy Resistance',
+    description: 'Cuts through dense tissue and bone with ease',
+    effect: 'Reduces target\'s Resistance by {x} for damage reduction from this weapon',
+    variable: { min: 4, max: 20, default: 4, step: 4 },
   },
   {
     id: 'tag-suppressive',
@@ -416,8 +405,8 @@ export const WEAPON_TAG_LIBRARY: WeaponTagDefinition[] = [
     id: 'tag-evolutionary',
     label: 'Evolutionary',
     category: 'Supernatural',
-    description: 'Zerg bio-adaptation (StarCraft)',
-    effect: 'After killing enemy type, gains +1 Magnitude vs that type until it adapts to a different enemy type',
+    description: 'Bio-adaptation',
+    effect: 'After killing an enemy, gains +1 Magnitude vs that species until it adapts to a different species',
   },
   {
     id: 'tag-anarchic',
@@ -437,7 +426,7 @@ export const WEAPON_TAG_LIBRARY: WeaponTagDefinition[] = [
     id: 'tag-shapeshifting',
     label: 'Shapeshifting',
     category: 'Supernatural',
-    description: 'Weapon can change its form (Amber)',
+    description: 'Weapon can change its form',
     effect: 'Wielder may shift weapon between forms (e.g., sword to spear to whip) as an action',
   },
   {
@@ -446,13 +435,6 @@ export const WEAPON_TAG_LIBRARY: WeaponTagDefinition[] = [
     category: 'Supernatural',
     description: 'Living metal from beyond',
     effect: 'Self-repairs 1 Form per hour; may attempt to repair wielder',
-  },
-  {
-    id: 'tag-wraithbone',
-    label: 'Wraithbone',
-    category: 'Supernatural',
-    description: 'Psychic resonant crystal',
-    effect: '+1 to Mind attacks; psychically reactive',
   },
   {
     id: 'tag-starmetal',
@@ -466,7 +448,7 @@ export const WEAPON_TAG_LIBRARY: WeaponTagDefinition[] = [
     label: 'Bio-Organic',
     category: 'Supernatural',
     description: 'Living weapon',
-    effect: 'Heals 1 damage per melee kill; unlimited ammunition',
+    effect: 'Heals 1 wound level per melee kill; unlimited ammunition',
   },
   {
     id: 'tag-energy',
@@ -510,63 +492,39 @@ export const WEAPON_TAG_LIBRARY: WeaponTagDefinition[] = [
     label: 'Demonically Howling',
     category: 'Legendary',
     description: 'The entity within the weapon emits a savage, unsettling howl whenever the weapon is used',
-    effect: 'Adds a Mind-Fear attack of the same Magnitude as the attack itself against enemies within hearing',
+    effect: 'Adds a Mag {x} Mind-Fear attack against enemies within hearing',
+    variable: { min: 1, max: 11, default: 3 },
   },
   {
-    id: 'tag-daemon-impervious-d4',
-    label: 'Demonically Impervious (4)',
+    id: 'tag-daemon-impervious',
+    label: 'Demonically Impervious',
     category: 'Legendary',
     description: 'The entity in this weapon is unconcerned by the trivial blows of mortal weapons',
-    effect: 'If a d4 die roll exceeds the Magnitude of the attack, no damage is caused',
-  },
-  {
-    id: 'tag-daemon-impervious-d6',
-    label: 'Demonically Impervious (6)',
-    category: 'Legendary',
-    description: 'The entity in this weapon is unconcerned by the trivial blows of mortal weapons',
-    effect: 'If a d6 die roll exceeds the Magnitude of the attack, no damage is caused',
-  },
-  {
-    id: 'tag-daemon-impervious-d8',
-    label: 'Demonically Impervious (8)',
-    category: 'Legendary',
-    description: 'The entity in this weapon is unconcerned by the trivial blows of mortal weapons',
-    effect: 'If a d8 die roll exceeds the Magnitude of the attack, no damage is caused',
-  },
-  {
-    id: 'tag-daemon-impervious-d10',
-    label: 'Demonically Impervious (10)',
-    category: 'Legendary',
-    description: 'The entity in this weapon is unconcerned by the trivial blows of mortal weapons',
-    effect: 'If a d10 die roll exceeds the Magnitude of the attack, no damage is caused',
-  },
-  {
-    id: 'tag-daemon-impervious-d12',
-    label: 'Demonically Impervious (12)',
-    category: 'Legendary',
-    description: 'The entity in this weapon is unconcerned by the trivial blows of mortal weapons',
-    effect: 'If a d12 die roll exceeds the Magnitude of the attack, no damage is caused',
+    effect: 'If a d{x} die roll exceeds the Magnitude of the attack, no damage is caused',
+    variable: { min: 4, max: 12, default: 6, step: 2, unit: 'd' },
   },
   {
     id: 'tag-daemon-impossibly-sharp',
     label: 'Demonically Sharp',
     category: 'Legendary',
-    description: 'The entity bound within this weapon hold the protection of mortal armour in the greatest of scorn',
-    effect: 'Ignores Armor (Pen 224) and Cover',
+    description: 'Cuts anything of shadow',
+    effect: 'Ignores Armor and Cover',
   },
   {
     id: 'tag-daemon-piercing',
     label: 'Demonically Piercing',
     category: 'Legendary',
     description: 'The entity within this weapon desires only to rend and tear at skin and muscle, and to shatter bone',
-    effect: '+6 damage per raise',
+    effect: '+{x} damage per Raise',
+    variable: { min: 2, max: 12, default: 6 },
   },
   {
     id: 'tag-daemon-voidchill',
     label: 'Demonically Cold',
     category: 'Legendary',
     description: 'The entity within this weapon has a demeanor so icy that its touch is deadly cold',
-    effect: 'Additional Form-Cold attack on a successful hit of the same Magnitude as the attack itself',
+    effect: 'Additional Mag {x} Form-Cold attack on a successful hit',
+    variable: { min: 1, max: 11, default: 3 },
   },
 ];
 
@@ -690,4 +648,105 @@ export function getOrderedCategories(tags: WeaponTagDefinition[]): string[] {
     cat => !WEAPON_TAG_CATEGORIES.includes(cat as typeof WEAPON_TAG_CATEGORIES[number])
   );
   return [...known, ...unknown];
+}
+
+// === Variable / WeaponTagRef utilities ===
+
+/**
+ * Parse a legacy tagId string into a WeaponTagRef.
+ * Accepts "tag-id" or "tag-id:7".
+ * Returns { tagId, x } — x is undefined if no suffix.
+ */
+export function parseTagRef(id: string): WeaponTagRef {
+  const idx = id.indexOf(':');
+  if (idx === -1) return { tagId: id };
+  const tagId = id.slice(0, idx);
+  const xStr = id.slice(idx + 1);
+  const x = parseInt(xStr, 10);
+  return Number.isFinite(x) ? { tagId, x } : { tagId };
+}
+
+/**
+ * Serialize a WeaponTagRef back to a string id.
+ * Tags without a variable, or with x === undefined, produce bare ids.
+ */
+export function serializeTagRef(ref: WeaponTagRef): string {
+  return ref.x === undefined ? ref.tagId : `${ref.tagId}:${ref.x}`;
+}
+
+/**
+ * Convenience: convert a list of refs to legacy string ids (for components
+ * that haven't been migrated yet). Preserves the colon-suffix format.
+ */
+export function refsToIds(refs: WeaponTagRef[]): string[] {
+  return refs.map(serializeTagRef);
+}
+
+/**
+ * Convenience: convert legacy string ids to refs.
+ */
+export function idsToRefs(ids: string[]): WeaponTagRef[] {
+  return ids.map(parseTagRef);
+}
+
+/**
+ * Given a tag definition and an optional x, produce the display label
+ * with the variable interpolated. e.g. ("Felling", x=2) => "Felling (2)".
+ * If the tag has no variable, returns label unchanged.
+ */
+export function formatTagLabel(
+  def: WeaponTagDefinition,
+  x?: number
+): string {
+  if (!def.variable || x === undefined) return def.label;
+  const unit = def.variable.unit ?? '';
+  return `${def.label} (${unit}${x})`;
+}
+
+/**
+ * Given a tag definition and an optional x, produce the effect text with
+ * any "{x}" placeholders replaced. Falls back to the bare effect if no
+ * placeholder is present.
+ */
+export function formatTagEffect(
+  def: WeaponTagDefinition,
+  x?: number
+): string | undefined {
+  if (!def.effect) return undefined;
+  if (x === undefined) return def.effect;
+  return def.effect.replace(/\{x\}/g, String(x));
+}
+
+/**
+ * Resolve a WeaponTagRef to its definition (library or custom) plus the
+ * effective x value (uses variable.default if x is undefined).
+ */
+export function resolveTagRef(
+  ref: WeaponTagRef,
+  customTags: WeaponTagDefinition[]
+): { def: WeaponTagDefinition; x?: number } | undefined {
+  const def = resolveTag(ref.tagId, customTags);
+  if (!def) return undefined;
+  const x = ref.x ?? def.variable?.default;
+  return { def, x };
+}
+
+/**
+ * Normalize a list of WeaponTagRef so that tags without a variable have
+ * x stripped, and tags with a variable have x defaulted if missing.
+ * Useful before saving.
+ */
+export function normalizeTagRefs(refs: WeaponTagRef[]): WeaponTagRef[] {
+  return refs.map(ref => {
+    const def = WEAPON_TAG_LIBRARY.find(t => t.id === ref.tagId);
+    if (!def?.variable) {
+      return ref.x === undefined ? ref : { tagId: ref.tagId };
+    }
+    if (ref.x === undefined) {
+      return { tagId: ref.tagId, x: def.variable.default };
+    }
+    const { min, max } = def.variable;
+    const x = Math.max(min, Math.min(max, ref.x));
+    return { tagId: ref.tagId, x };
+  });
 }

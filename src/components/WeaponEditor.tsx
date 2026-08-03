@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import type { AspectName, AttackType, WeaponAttack, CharacterWeapon, WeaponCapacity, WeaponCategory, WeaponHandedness, WeaponRange, WeaponReloadTime, WeaponTagDefinition } from '../types/character';
+import type { 
+  AspectName, AttackType, WeaponAttack, CharacterWeapon, WeaponCapacity, WeaponCategory, WeaponHandedness, 
+  WeaponRange, WeaponReloadTime, WeaponTagDefinition, WeaponTagRef } from '../types/character';
 import { ASPECTS, ATTACK_TYPES_BY_ASPECT, WEAPON_RANGES, getMechanismGroupsForAspect } from '../types/character';
 import { DAMAGE_MAGNITUDE_TABLE, type DamageMagnitudeEntry } from '../data/damageTable';
-import { WEAPON_CAPACITY_OPTIONS, WEAPON_CATEGORY_GROUPS, WEAPON_RELOAD_TIME_OPTIONS, DEFAULT_ATTACK_BY_CATEGORY, DEFAULT_HANDEDNESS_BY_CATEGORY, MECHANISM_LABELS } from '../data/weaponData';
+import { WEAPON_CAPACITY_OPTIONS, WEAPON_CATEGORY_GROUPS, WEAPON_RELOAD_TIME_OPTIONS, 
+  DEFAULT_ATTACK_BY_CATEGORY, DEFAULT_HANDEDNESS_BY_CATEGORY, MECHANISM_LABELS } from '../data/weaponData';
 import StepperInput from './StepperInput';
 import { WeaponTagEditor } from './WeaponTagEditor';
+import { normalizeTagRefs, idsToRefs } from '../data/weaponTags';
 
 interface WeaponEditorProps {
   weapon?: CharacterWeapon;
@@ -24,9 +28,13 @@ export function WeaponEditor({ weapon, customTags, onSave, onCancel }: WeaponEdi
   const [capacityMin, setCapacityMin] = useState<WeaponCapacity | ''>(weapon?.capacity?.min || '');
   const [capacityMax, setCapacityMax] = useState<WeaponCapacity | ''>(weapon?.capacity?.max || '');
   const [reloadTime, setReloadTime] = useState<WeaponReloadTime | ''>(weapon?.reloadTime || '');
-  const [tagIds, setTagIds] = useState<string[]>(weapon?.tagIds || []);
-  const [newCustomTags, setNewCustomTags] = useState<WeaponTagDefinition[]>(() => 
-    (customTags || []).filter(ct => tagIds.includes(ct.id))
+  const [tags, setTags] = useState<WeaponTagRef[]>(() => {
+    if (weapon?.tags) return normalizeTagRefs(weapon.tags);
+    if (weapon?.tagIds) return idsToRefs(weapon.tagIds);  // back-compat
+    return [];
+  });
+  const [newCustomTags, setNewCustomTags] = useState<WeaponTagDefinition[]>(() =>
+    (customTags || []).filter(ct => tags.some(t => t.tagId === ct.id))
   );
 
   const handleCategoryChange = (newCategory: WeaponCategory) => {
@@ -73,7 +81,7 @@ export function WeaponEditor({ weapon, customTags, onSave, onCancel }: WeaponEdi
       attacks,
       capacity,
       reloadTime: reloadTime || undefined,
-      tagIds: tagIds.length > 0 ? tagIds : undefined,
+      tags: normalizeTagRefs(tags),
     }, newCustomTags);
   };
 
@@ -341,9 +349,9 @@ export function WeaponEditor({ weapon, customTags, onSave, onCancel }: WeaponEdi
 
       {/* Tags */}
       <WeaponTagEditor
-        tagIds={tagIds}
+        tags={tags}
         customTags={customTags}
-        onChange={setTagIds}
+        onChange={setTags}
         onNewCustomTags={setNewCustomTags}
       />
 

@@ -6,7 +6,8 @@ import {
 } from '../types/character';
 import { getDiePoolEntry } from '../data/diePoolTable';
 import { formatWeaponLogistics } from '../data/weaponData';
-import { resolveWeaponTags } from '../data/weaponTags';
+import { resolveTagRef, idsToRefs, formatTagEffect } from '../data/weaponTags';
+import type { WeaponTagRef } from '../types/character';
 
 const SKILL_MODIFIERS: Record<SkillRating, number> = Object.fromEntries(
   SKILL_RATINGS.map(s => [s.rating, s.modifier])
@@ -222,7 +223,10 @@ export function PrintableSheet() {
           <h2 className="font-bold text-sm border-b border-gray-400 mb-1">Weapons</h2>
           {character.weapons.map(weapon => {
             const logistics = formatWeaponLogistics(weapon.capacity, weapon.reloadTime);
-            const resolvedTags = resolveWeaponTags(weapon.tagIds || [], character.customTags);
+            const refs: WeaponTagRef[] = weapon.tags ?? idsToRefs(weapon.tagIds ?? []);
+            const resolvedTags = refs
+              .map(ref => resolveTagRef(ref, character.customTags))
+              .filter((t): t is NonNullable<typeof t> => t !== null);
             return (
               <div key={weapon.id} className="mb-1">
                 <span className="font-medium">{weapon.name}</span>
@@ -237,14 +241,17 @@ export function PrintableSheet() {
                     {atk.isConditional && atk.condition && <span className="italic"> ({atk.condition})</span>}
                   </div>
                 ))}
-                {resolvedTags.map(tag => (
-                  <div key={tag.id} className="ml-3">
-                    <span className="font-medium">{tag.label}</span>
-                    <span className="text-gray-500"> ({tag.category})</span>
-                    {tag.description && <span className="text-gray-600"> — {tag.description}</span>}
-                    {tag.effect && <span className="text-gray-600 italic"> {tag.effect}</span>}
-                  </div>
-                ))}
+                {resolvedTags.map(({ def, x }) => {
+                  const effectText = formatTagEffect(def, x);
+                  return (
+                    <div key={def.id} className="ml-3">
+                      <span className="font-medium">{def.label}</span>
+                      <span className="text-gray-500"> ({def.category})</span>
+                      {def.description && <span className="text-gray-600"> — {def.description}</span>}
+                      {effectText && <span className="text-gray-600 italic"> {effectText}</span>}
+                    </div>
+                  );
+                })}
               </div>
             );
           })}

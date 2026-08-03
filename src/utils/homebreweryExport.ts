@@ -5,7 +5,8 @@ import { POWERS } from '../data/powers';
 import { getDiePoolEntry } from '../data/diePoolTable';
 import { getPowerDisplay } from './powerDisplay';
 import { formatWeaponLogistics } from '../data/weaponData';
-import { resolveWeaponTags } from '../data/weaponTags';
+import { resolveTagRef, idsToRefs, formatTagEffect } from '../data/weaponTags';
+import type { WeaponTagRef } from '../types/character';
 
 // Convert die pool to Homebrewery die icons
 function dieIcons(pool: DiePool): string {
@@ -380,13 +381,13 @@ export function generateHomebreweryMarkdown(
       if (logistics) parts.push(logistics);
       
       // Tags
-      const resolvedTags = resolveWeaponTags(weapon.tagIds || [], customTags);
-      const tagTexts = resolvedTags.map(tag => {
-        let text = tag.label;
-        // if (tag.category) text += ` (${tag.category})`;
-        if (tag.effect) text += ` (${tag.effect})`;
-        return text;
-      });
+      const refs: WeaponTagRef[] = weapon.tags ?? idsToRefs(weapon.tagIds ?? []);
+      const tagTexts = refs.map(ref => {
+        const resolved = resolveTagRef(ref, customTags);
+        if (!resolved) return null;
+        const effectText = formatTagEffect(resolved.def, resolved.x);
+        return effectText ? `${resolved.def.label} (${effectText})` : resolved.def.label;
+      }).filter((t): t is string => t !== null);
       const tagsSection = tagTexts.length > 0 ? `. Qualities: ${tagTexts.join(', ')}` : '';
       
       lines.push(`**${weapon.name}** :: (${parenthetical}). ${parts.join('. ')}${tagsSection}`);

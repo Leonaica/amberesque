@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { WeaponTagDefinition } from '../types/character';
+import type { WeaponTagDefinition, WeaponTagRef } from '../types/character';
 import {
   WEAPON_TAG_CATEGORIES,
   WEAPON_TAG_LIBRARY,
@@ -7,19 +7,26 @@ import {
   getOrderedCategories,
   mergeTags,
   findTagByLabel,
-  resolveTag,
+  resolveTagRef,
+  formatTagEffect,
 } from '../data/weaponTags';
 import { TagChip } from './TagChip';
 
 interface WeaponTagEditorProps {
-  tagIds: string[];
+  tags: WeaponTagRef[];
   customTags?: WeaponTagDefinition[];
-  onChange: (tagIds: string[]) => void;
+  onChange: (tags: WeaponTagRef[]) => void;
   onNewCustomTags: (tags: WeaponTagDefinition[]) => void;
 }
 
+interface ResolvedTag {
+  ref: WeaponTagRef;
+  def: WeaponTagDefinition;
+  x?: number;
+}
+
 export function WeaponTagEditor({
-  tagIds = [],
+  tags = [],
   customTags = [],
   onChange,
   onNewCustomTags,
@@ -31,28 +38,48 @@ export function WeaponTagEditor({
 
   // Custom tag form state
   const [ctLabel, setCtLabel] = useState('');
-  const [ctCategory, setCtCategory] = useState<string>('Quality');
+  const [ctCategory, setCtCategory] = useState<string>('Inherent');
   const [ctCustomCategory, setCtCustomCategory] = useState('');
   const [ctDescription, setCtDescription] = useState('');
   const [ctEffect, setCtEffect] = useState('');
+  const [ctHasVariable, setCtHasVariable] = useState(false);
+  const [ctVarMin, setCtVarMin] = useState(1);
+  const [ctVarMax, setCtVarMax] = useState(4);
+  const [ctVarDefault, setCtVarDefault] = useState(1);
+  const [ctVarUnit, setCtVarUnit] = useState('');
 
   const allCustomTags = [...customTags, ...newCustomTags];
   const allAvailableTags = mergeTags(WEAPON_TAG_LIBRARY, allCustomTags);
 
-  const selectedTags = tagIds
-    .map(id => resolveTag(id, allCustomTags))
-    .filter((t): t is WeaponTagDefinition => t !== undefined);
+// Resolve selected refs to { ref, def, x } for rendering
+const selected = tags
+.map((ref): ResolvedTag | null => {
+  const resolved = resolveTagRef(ref, allCustomTags);
+  if (!resolved) return null;
+  return { ref, def: resolved.def, x: resolved.x };
+})
+.filter((s): s is ResolvedTag => s !== null);
+
+  const selectedTagIds = new Set(tags.map(t => t.tagId));
 
   const toggleTag = (tagId: string) => {
-    if (tagIds.includes(tagId)) {
-      onChange(tagIds.filter(id => id !== tagId));
+    if (selectedTagIds.has(tagId)) {
+      onChange(tags.filter(t => t.tagId !== tagId));
     } else {
-      onChange([...tagIds, tagId]);
+      const def = allAvailableTags.find(t => t.id === tagId);
+      const newRef: WeaponTagRef = def?.variable
+        ? { tagId, x: def.variable.default }
+        : { tagId };
+      onChange([...tags, newRef]);
     }
   };
 
   const removeTag = (tagId: string) => {
-    onChange(tagIds.filter(id => id !== tagId));
+    onChange(tags.filter(t => t.tagId !== tagId));
+  };
+
+  const updateX = (tagId: string, x: number | undefined) => {
+    onChange(tags.map(t => t.tagId === tagId ? { ...t, x } : t));
   };
 
   const handleCreateCustomTag = () => {
@@ -61,42 +88,55 @@ export function WeaponTagEditor({
     const category = ctCategory === '__other__' ? ctCustomCategory.trim() : ctCategory;
     if (!category) return;
 
-    // Dedup: if a tag with this label already exists, just toggle it on
+    // Dedup by label
     const existing = findTagByLabel(ctLabel, allCustomTags);
     if (existing) {
-      if (!tagIds.includes(existing.id)) {
+      if (!selectedTagIds.has(existing.id)) {
         toggleTag(existing.id);
       }
-      // Reset form
-      setCtLabel('');
-      setCtCategory('Quality');
-      setCtCustomCategory('');
-      setCtDescription('');
-      setCtEffect('');
-      setShowCustomForm(false);
+      resetCustomForm();
       return;
     }
 
-    // Create new custom tag
     const newTag: WeaponTagDefinition = {
       id: crypto.randomUUID(),
       label: ctLabel.trim(),
       category,
       ...(ctDescription.trim() && { description: ctDescription.trim() }),
       ...(ctEffect.trim() && { effect: ctEffect.trim() }),
+      ...(ctHasVariable && ctVarMax >= ctVarMin && {
+        variable: {
+          min: ctVarMin,
+          max: ctVarMax,
+          default: Math.max(ctVarMin, Math.min(ctVarMax, ctVarDefault)),
+          ...(ctVarUnit.trim() && { unit: ctVarUnit.trim() }),
+        },
+      }),
     };
 
     const updated = [...newCustomTags, newTag];
     setNewCustomTags(updated);
     onNewCustomTags(updated);
-    onChange([...tagIds, newTag.id]);
 
-    // Reset form
+    const newRef: WeaponTagRef = newTag.variable
+      ? { tagId: newTag.id, x: newTag.variable.default }
+      : { tagId: newTag.id };
+    onChange([...tags, newRef]);
+
+    resetCustomForm();
+  };
+
+  const resetCustomForm = () => {
     setCtLabel('');
-    setCtCategory('Quality');
+    setCtCategory('Inherent');
     setCtCustomCategory('');
     setCtDescription('');
     setCtEffect('');
+    setCtHasVariable(false);
+    setCtVarMin(1);
+    setCtVarMax(4);
+    setCtVarDefault(1);
+    setCtVarUnit('');
     setShowCustomForm(false);
   };
 
@@ -138,13 +178,47 @@ export function WeaponTagEditor({
 
       {/* Selected tags */}
       <div className="min-h-[2.5rem] bg-slate-700/30 rounded p-2 flex flex-wrap gap-1.5 items-start">
-        {selectedTags.length === 0 ? (
+        {selected.length === 0 ? (
           <span className="text-slate-500 text-sm italic py-0.5">
             No qualities selected
           </span>
         ) : (
-          selectedTags.map(tag => (
-            <TagChip key={tag.id} tag={tag} onRemove={removeTag} />
+          selected.map(({ ref, def, x }) => (
+            <div
+              key={ref.tagId}
+              className="inline-flex items-center gap-1 rounded-full border bg-slate-700/50 border-slate-600 pl-1 pr-0.5 py-0.5"
+            >
+              {/* Label portion (clickable to remove) */}
+              <TagChip
+                tag={def}
+                x={x}
+                onRemove={() => removeTag(ref.tagId)}
+                size="sm"
+              />
+              {/* X input — only if the tag has a variable */}
+              {def.variable && (
+                <input
+                  type="number"
+                  min={def.variable.min}
+                  max={def.variable.max}
+                  step={def.variable.step ?? 1}
+                  value={x ?? def.variable.default}
+                  onChange={e => {
+                    const v = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                    updateX(ref.tagId, v);
+                  }}
+                  onBlur={e => {
+                    const def0 = def.variable!;
+                    let v = e.target.value === '' ? def0.default : parseInt(e.target.value, 10);
+                    if (!Number.isFinite(v)) v = def0.default;
+                    v = Math.max(def0.min, Math.min(def0.max, v));
+                    updateX(ref.tagId, v);
+                  }}
+                  className="w-12 bg-slate-800 border border-slate-500 rounded px-1 py-0.5 text-xs text-white text-center"
+                  title={`X: ${def.variable.min}–${def.variable.max}`}
+                />
+              )}
+            </div>
           ))
         )}
       </div>
@@ -174,9 +248,10 @@ export function WeaponTagEditor({
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {catTags.map(tag => {
-                      const isSelected = tagIds.includes(tag.id);
+                      const isSelected = selectedTagIds.has(tag.id);
                       const tagColor = getTagColor(tag.category);
-                      const tooltip = [tag.effect, tag.description].filter(Boolean).join(' — ') || tag.label;
+                      const tooltip = [formatTagEffect(tag, tag.variable?.default), tag.description]
+                        .filter(Boolean).join(' — ') || tag.label;
                       return (
                         <button
                           key={tag.id}
@@ -190,6 +265,11 @@ export function WeaponTagEditor({
                         >
                           {isSelected && <span className="mr-1">✓</span>}
                           {tag.label}
+                          {tag.variable && (
+                            <span className="ml-1 text-xs opacity-60">
+                              ({tag.variable.unit ?? ''}{tag.variable.min}–{tag.variable.unit ?? ''}{tag.variable.max})
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -247,7 +327,7 @@ export function WeaponTagEditor({
               value={ctEffect}
               onChange={e => setCtEffect(e.target.value)}
               className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-              placeholder="Mechanical effect, e.g., +10 to hit in desert terrain"
+              placeholder="Mechanical effect. Use {x} for the variable value, e.g., +{x} damage per Raise"
               rows={2}
             />
           </div>
@@ -261,6 +341,60 @@ export function WeaponTagEditor({
               rows={2}
             />
           </div>
+
+          {/* Variable toggle */}
+          <div className="border-t border-slate-600 pt-2 space-y-2">
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              <input
+                type="checkbox"
+                checked={ctHasVariable}
+                onChange={e => setCtHasVariable(e.target.checked)}
+              />
+              Accepts a variable value (X)
+            </label>
+            {ctHasVariable && (
+              <div className="grid grid-cols-4 gap-2">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Min</label>
+                  <input
+                    type="number"
+                    value={ctVarMin}
+                    onChange={e => setCtVarMin(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Max</label>
+                  <input
+                    type="number"
+                    value={ctVarMax}
+                    onChange={e => setCtVarMax(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Default</label>
+                  <input
+                    type="number"
+                    value={ctVarDefault}
+                    onChange={e => setCtVarDefault(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Unit</label>
+                  <input
+                    type="text"
+                    value={ctVarUnit}
+                    onChange={e => setCtVarUnit(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                    placeholder="e.g., d (for dice)"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={handleCreateCustomTag}
             disabled={!ctLabel.trim() || (ctCategory === '__other__' && !ctCustomCategory.trim())}

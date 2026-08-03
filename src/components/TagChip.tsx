@@ -1,16 +1,19 @@
 import type { WeaponTagDefinition } from '../types/character';
-import { getTagColor } from '../data/weaponTags';
+import { getTagColor, formatTagLabel, formatTagEffect } from '../data/weaponTags';
 
 interface TagChipProps {
   tag: WeaponTagDefinition;
+  x?: number;
   onRemove?: (tagId: string) => void;
   showCategory?: boolean;
   size?: 'sm' | 'md';
 }
 
-export function TagChip({ tag, onRemove, showCategory = false, size = 'md' }: TagChipProps) {
+export function TagChip({ tag, x, onRemove, showCategory = false, size = 'md' }: TagChipProps) {
   const color = getTagColor(tag.category);
-  const tooltipText = [tag.effect, tag.description].filter(Boolean).join(' — ') || tag.label;
+  const displayLabel = formatTagLabel(tag, x);
+  const displayEffect = formatTagEffect(tag, x);
+  const tooltipText = [displayEffect, tag.description].filter(Boolean).join(' — ') || displayLabel;
   const sizeClasses = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-2.5 py-1';
 
   return (
@@ -21,12 +24,12 @@ export function TagChip({ tag, onRemove, showCategory = false, size = 'md' }: Ta
       {showCategory && (
         <span className="text-xs opacity-60">{tag.category}</span>
       )}
-      <span>{tag.label}</span>
+      <span>{displayLabel}</span>
       {onRemove && (
         <button
           onClick={() => onRemove(tag.id)}
           className="ml-0.5 hover:text-white opacity-60 hover:opacity-100"
-          aria-label={`Remove ${tag.label}`}
+          aria-label={`Remove ${displayLabel}`}
         >
           ×
         </button>

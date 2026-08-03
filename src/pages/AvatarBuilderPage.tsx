@@ -10,7 +10,8 @@ import { CharacterSheet } from '../components/CharacterSheet';
 import { IconPicker } from '../components/IconPicker';
 import { ICONS, DEFAULT_ICON, type IconEntry } from '../data/icons';
 import { WeaponEditor } from '../components/WeaponEditor';
-import { resolveWeaponTags } from '../data/weaponTags';
+import { resolveTagRef, idsToRefs } from '../data/weaponTags';
+import type { WeaponTagRef } from '../types/character';
 import { TagChip } from '../components/TagChip';
 import { ArmorEditor } from '../components/ArmorEditor';
 import type { CharacterWeapon } from '../types/character';
@@ -1215,40 +1216,77 @@ export function AvatarBuilderPage() {
                   )}
                   
                   {/* Tags */}
-                  {weapon.tagIds && weapon.tagIds.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {resolveWeaponTags(weapon.tagIds, character.customTags).map(tag => (
-                        <TagChip key={tag.id} tag={tag} size="sm" />
-                      ))}
-                    </div>
-                  )}
+                  {(() => {
+                    const refs: WeaponTagRef[] = weapon.tags ?? idsToRefs(weapon.tagIds ?? []);
+                    if (refs.length === 0) return null;
+                    return (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {refs.map(ref => {
+                          const resolved = resolveTagRef(ref, character.customTags);
+                          return resolved ? (
+                            <TagChip 
+                              key={ref.tagId} 
+                              tag={resolved.def} 
+                              x={resolved.x} 
+                              size="sm" 
+                            />
+                          ) : null;
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
 
               {showWeaponEditor && (
-                <div className="mt-4">
-                  <WeaponEditor
-                    weapon={editingWeapon || undefined}
-                    customTags={character.customTags}
-                    onSave={(weaponData, newCustomTags) => {
-                      // Use functional update to safely append without overwriting
-                      if (newCustomTags.length > 0) {
-                        character.setCustomTags(prev => [...prev, ...newCustomTags]);
-                      }
-                      
-                      if (editingWeapon) {
-                        character.updateWeapon(editingWeapon.id, weaponData);
-                      } else {
-                        character.addWeapon(weaponData);
-                      }
-                      setShowWeaponEditor(false);
-                      setEditingWeapon(null);
-                    }}
-                    onCancel={() => {
-                      setShowWeaponEditor(false);
-                      setEditingWeapon(null);
-                    }}
-                  />
+                <div 
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                  onClick={() => {
+                    setShowWeaponEditor(false);
+                    setEditingWeapon(null);
+                  }}
+                >
+                  <div 
+                    className="bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="sticky top-0 bg-slate-800 border-b border-slate-700 px-6 py-3 flex items-center justify-between rounded-t-lg">
+                      <h3 className="text-white font-bold">
+                        {editingWeapon ? `Edit ${editingWeapon.name}` : 'Add Weapon'}
+                      </h3>
+                      <button
+                        onClick={() => {
+                          setShowWeaponEditor(false);
+                          setEditingWeapon(null);
+                        }}
+                        className="text-slate-400 hover:text-white text-xl"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="p-6">
+                      <WeaponEditor
+                        weapon={editingWeapon || undefined}
+                        customTags={character.customTags}
+                        onSave={(weaponData, newCustomTags) => {
+                          if (newCustomTags.length > 0) {
+                            character.setCustomTags(prev => [...prev, ...newCustomTags]);
+                          }
+                          if (editingWeapon) {
+                            character.updateWeapon(editingWeapon.id, weaponData);
+                          } else {
+                            character.addWeapon(weaponData);
+                          }
+                          setShowWeaponEditor(false);
+                          setEditingWeapon(null);
+                        }}
+                        onCancel={() => {
+                          setShowWeaponEditor(false);
+                          setEditingWeapon(null);
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

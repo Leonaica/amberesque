@@ -399,13 +399,39 @@ export function getMechanismGroupsForAspect(aspect: AspectName): Record<string, 
   }
 }
 
+export interface WeaponTagVariable {
+  min: number;
+  max: number;
+  default: number;
+  unit?: string;          // e.g. 'd' for die-type tags, '' or omitted for plain numbers
+  step?: number;          // defaults to 1; use 2 for even-only ranges, etc.
+}
+
 export interface WeaponTagDefinition {
   id: string;
   label: string;
   category: string;
   description?: string;
   effect?: string;
+  variable?: WeaponTagVariable;   // NEW
 }
+
+/**
+ * A reference to a tag in a weapon's tag list.
+ * If the referenced tag definition has a `variable`, `x` carries the chosen value.
+ * For tags without a variable, `x` is omitted/undefined.
+ *
+ * The `id` format is intentionally the same as before for back-compat:
+ *   "tag-felling"  (no variable, or variable with x = default)
+ *   "tag-felling:2" (variable, x = 2)
+ *
+ * `tagId` is always the bare definition id (no colon suffix).
+ */
+export interface WeaponTagRef {
+  tagId: string;
+  x?: number;
+}
+
 
 export type WeaponHandedness = 'One-handed' | 'Two-handed' | 'Hands free' | 'Extra limb';
 
@@ -460,7 +486,8 @@ export interface CharacterWeapon {
   handedness: WeaponHandedness;
   capacity?: { min: WeaponCapacity; max?: WeaponCapacity };
   reloadTime?: WeaponReloadTime;
-  tagIds?: string[];
+  tagIds?: string[];          // LEGACY — still readable for back-compat. Remove after updating all saves.
+  tags?: WeaponTagRef[];      // NEW — preferred. Migrate on next save.
 }
 
 export interface CharacterArmor {
