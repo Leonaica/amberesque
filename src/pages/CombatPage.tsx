@@ -2,12 +2,14 @@ import { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCharacter } from '../context/useCharacter';
 import { useGameState } from '../context/useGameState';
-import {  WOUND_LABELS, WOUND_PENALTIES } from '../data/wounds';
-import { ASPECTS, type AspectName, type WeaponAttack, type ArmorAspect } from '../types/character';
+import { WOUND_LABELS, WOUND_PENALTIES } from '../data/wounds';
+import { ASPECTS, type AspectName, type WeaponAttack, type ArmorAspect, type WeaponTagRef, type WeaponTagDefinition } from '../types/character';
 import { DAMAGE_MAGNITUDE_TABLE, type DamageMagnitudeEntry } from '../data/damageTable';
 import { calculateDamage, getResistanceAttribute, calculateStacking } from '../utils/damage';
 import type { DamageResult, WoundLevel } from '../utils/damage';
 import { calculateWoundProbabilities, type WoundProbabilities } from '../utils/probability';
+import { resolveTagRef, formatTagEffect, idsToRefs } from '../data/weaponTags';
+import { TagChip } from '../components/TagChip';
 import StepperInput from '../components/StepperInput';
 
 interface CombatPageState {
@@ -468,6 +470,45 @@ export function CombatPage() {
                   </div>
                 </div>
               )}
+
+              {/* Qualities reminder — shown when a weapon with tags is selected */}
+              {selectedWeapon && (() => {
+                const refs: WeaponTagRef[] = selectedWeapon.tags ?? idsToRefs(selectedWeapon.tagIds ?? []);
+                if (refs.length === 0) return null;
+
+                const resolvedTags = refs
+                .map(ref => {
+                  const r = resolveTagRef(ref, character.customTags);
+                  return r ? { ref, def: r.def, x: ref.x ?? r.def.variable?.default } : null;
+                })
+                .filter((t): t is { ref: WeaponTagRef; def: WeaponTagDefinition; x: number | undefined } => t !== null);
+
+                if (resolvedTags.length === 0) return null;
+
+                return (
+                  <div className="bg-slate-700/30 rounded p-1.5 space-y-1">
+                    <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wide flex items-center gap-1">
+                      <span>Qualities</span>
+                      <span className="text-amber-400/70 normal-case font-normal">(apply manually)</span>
+                    </div>
+                    <div className="space-y-1">
+                      {resolvedTags.map(({ ref, def, x }) => {
+                        const effectText = formatTagEffect(def, x);
+                        return (
+                          <div key={ref.tagId} className="flex items-start gap-1.5">
+                            <TagChip tag={def} x={x} size="sm" />
+                            {effectText && (
+                              <span className="text-[10px] text-slate-400 leading-tight pt-0.5 flex-1">
+                                {effectText}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           )}
 
