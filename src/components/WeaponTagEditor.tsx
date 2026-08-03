@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { WeaponTagDefinition, WeaponTagRef } from '../types/character';
 import {
   WEAPON_TAG_CATEGORIES,
@@ -11,6 +11,7 @@ import {
   formatTagEffect,
 } from '../data/weaponTags';
 import { TagChip } from './TagChip';
+import StepperInput from './StepperInput';
 
 interface WeaponTagEditorProps {
   tags: WeaponTagRef[];
@@ -31,10 +32,11 @@ export function WeaponTagEditor({
   onChange,
   onNewCustomTags,
 }: WeaponTagEditorProps) {
-  const [showBrowse, setShowBrowse] = useState(false);
-  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [activePanel, setActivePanel] = useState<'none' | 'browse' | 'custom'>('none');
   const [filter, setFilter] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
   const [newCustomTags, setNewCustomTags] = useState<WeaponTagDefinition[]>([]);
+  const filterRef = useRef<HTMLInputElement>(null);
 
   // Custom tag form state
   const [ctLabel, setCtLabel] = useState('');
@@ -48,17 +50,29 @@ export function WeaponTagEditor({
   const [ctVarDefault, setCtVarDefault] = useState(1);
   const [ctVarUnit, setCtVarUnit] = useState('');
 
+  useEffect(() => {
+    if (activePanel === 'browse' && filterRef.current) {
+      filterRef.current.focus();
+    }
+  }, [activePanel]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   const allCustomTags = [...customTags, ...newCustomTags];
   const allAvailableTags = mergeTags(WEAPON_TAG_LIBRARY, allCustomTags);
 
-// Resolve selected refs to { ref, def, x } for rendering
-const selected = tags
-.map((ref): ResolvedTag | null => {
-  const resolved = resolveTagRef(ref, allCustomTags);
-  if (!resolved) return null;
-  return { ref, def: resolved.def, x: resolved.x };
-})
-.filter((s): s is ResolvedTag => s !== null);
+  // Resolve selected refs to { ref, def, x } for rendering
+  const selected = tags
+    .map((ref): ResolvedTag | null => {
+      const resolved = resolveTagRef(ref, allCustomTags);
+      if (!resolved) return null;
+      return { ref, def: resolved.def, x: resolved.x };
+    })
+    .filter((s): s is ResolvedTag => s !== null);
 
   const selectedTagIds = new Set(tags.map(t => t.tagId));
 
@@ -94,6 +108,7 @@ const selected = tags
       if (!selectedTagIds.has(existing.id)) {
         toggleTag(existing.id);
       }
+      setNotice(`A quality named "${ctLabel}" already exists—selected it for you.`);
       resetCustomForm();
       return;
     }
@@ -137,7 +152,7 @@ const selected = tags
     setCtVarMax(4);
     setCtVarDefault(1);
     setCtVarUnit('');
-    setShowCustomForm(false);
+    setActivePanel('none');
   };
 
   // Filter logic
@@ -156,24 +171,37 @@ const selected = tags
   const categories = getOrderedCategories(filteredTags);
 
   return (
-    <div className="space-y-2">
-      {/* Label */}
-      <div className="flex justify-between items-center">
-        <label className="text-sm text-slate-400">Qualities</label>
+    <div className="space-y-3">
+      {/* Section header */}
+      <div className="space-y-1">
+        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-700 pb-1">
+          Qualities
+        </h4>
         <div className="flex gap-2">
           <button
-            onClick={() => setShowBrowse(!showBrowse)}
-            className="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-slate-300"
+            onClick={() => setActivePanel(activePanel === 'browse' ? 'none' : 'browse')}
+            className={`text-xs px-2 py-1 rounded transition-colors ${
+              activePanel === 'browse'
+                ? 'bg-amber-500 text-slate-900'
+                : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+            }`}
           >
-            {showBrowse ? '▲ Hide Library' : '▼ Browse Library'}
+            {activePanel === 'browse' ? '▲ Hide Library' : '▼ Browse Library'}
           </button>
           <button
-            onClick={() => setShowCustomForm(!showCustomForm)}
-            className="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-slate-300"
+            onClick={() => setActivePanel(activePanel === 'custom' ? 'none' : 'custom')}
+            className={`text-xs px-2 py-1 rounded transition-colors ${
+              activePanel === 'custom'
+                ? 'bg-amber-500 text-slate-900'
+                : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+            }`}
           >
-            {showCustomForm ? '▲ Cancel' : '+ New Custom Quality'}
+            {activePanel === 'custom' ? '▲ Cancel' : '+ New Custom Quality'}
           </button>
         </div>
+        {notice && (
+          <p className="text-xs text-amber-400">{notice}</p>
+        )}
       </div>
 
       {/* Selected tags */}
@@ -188,34 +216,21 @@ const selected = tags
               key={ref.tagId}
               className="inline-flex items-center gap-1 rounded-full border bg-slate-700/50 border-slate-600 pl-1 pr-0.5 py-0.5"
             >
-              {/* Label portion (clickable to remove) */}
               <TagChip
                 tag={def}
                 x={x}
                 onRemove={() => removeTag(ref.tagId)}
                 size="sm"
               />
-              {/* X input — only if the tag has a variable */}
               {def.variable && (
-                <input
-                  type="number"
+                <StepperInput
+                  value={x ?? def.variable.default}
+                  onValueChange={(val) => updateX(ref.tagId, val)}
                   min={def.variable.min}
                   max={def.variable.max}
                   step={def.variable.step ?? 1}
-                  value={x ?? def.variable.default}
-                  onChange={e => {
-                    const v = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
-                    updateX(ref.tagId, v);
-                  }}
-                  onBlur={e => {
-                    const def0 = def.variable!;
-                    let v = e.target.value === '' ? def0.default : parseInt(e.target.value, 10);
-                    if (!Number.isFinite(v)) v = def0.default;
-                    v = Math.max(def0.min, Math.min(def0.max, v));
-                    updateX(ref.tagId, v);
-                  }}
-                  className="w-12 bg-slate-800 border border-slate-500 rounded px-1 py-0.5 text-xs text-white text-center"
-                  title={`X: ${def.variable.min}–${def.variable.max}`}
+                  showButtons={false}
+                  className="text-xs text-white"
                 />
               )}
             </div>
@@ -224,9 +239,10 @@ const selected = tags
       </div>
 
       {/* Browse panel */}
-      {showBrowse && (
+      {activePanel === 'browse' && (
         <div className="bg-slate-700/30 rounded p-3 space-y-3">
           <input
+            ref={filterRef}
             type="text"
             value={filter}
             onChange={e => setFilter(e.target.value)}
@@ -282,117 +298,126 @@ const selected = tags
       )}
 
       {/* Custom tag form */}
-      {showCustomForm && (
-        <div className="bg-slate-700/30 rounded p-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Label *</label>
-              <input
-                type="text"
-                value={ctLabel}
-                onChange={e => setCtLabel(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-                placeholder="e.g., Crysknife, Sanctified"
-              />
+      {activePanel === 'custom' && (
+        <div className="bg-slate-700/30 rounded p-3 space-y-4">
+          {/* Identity section */}
+          <div className="space-y-2">
+            <h5 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Identity</h5>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Label *</label>
+                <input
+                  type="text"
+                  value={ctLabel}
+                  onChange={e => setCtLabel(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                  placeholder="e.g., Crysknife, Sanctified"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Category *</label>
+                <select
+                  value={ctCategory}
+                  onChange={e => setCtCategory(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                >
+                  {WEAPON_TAG_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                  <option value="__other__">Other...</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Category *</label>
-              <select
-                value={ctCategory}
-                onChange={e => setCtCategory(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-              >
-                {WEAPON_TAG_CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-                <option value="__other__">Other...</option>
-              </select>
-            </div>
-          </div>
-          {ctCategory === '__other__' && (
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Custom Category</label>
-              <input
-                type="text"
-                value={ctCustomCategory}
-                onChange={e => setCtCustomCategory(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-                placeholder="Enter category name"
-              />
-            </div>
-          )}
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Effect</label>
-            <textarea
-              value={ctEffect}
-              onChange={e => setCtEffect(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-              placeholder="Mechanical effect. Use {x} for the variable value, e.g., +{x} damage per Raise"
-              rows={2}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Description</label>
-            <textarea
-              value={ctDescription}
-              onChange={e => setCtDescription(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-              placeholder="Lore or narrative description (optional)"
-              rows={2}
-            />
-          </div>
-
-          {/* Variable toggle */}
-          <div className="border-t border-slate-600 pt-2 space-y-2">
-            <label className="flex items-center gap-2 text-xs text-slate-400">
-              <input
-                type="checkbox"
-                checked={ctHasVariable}
-                onChange={e => setCtHasVariable(e.target.checked)}
-              />
-              Accepts a variable value (X)
-            </label>
-            {ctHasVariable && (
-              <div className="grid grid-cols-4 gap-2">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Min</label>
-                  <input
-                    type="number"
-                    value={ctVarMin}
-                    onChange={e => setCtVarMin(parseInt(e.target.value) || 0)}
-                    className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Max</label>
-                  <input
-                    type="number"
-                    value={ctVarMax}
-                    onChange={e => setCtVarMax(parseInt(e.target.value) || 0)}
-                    className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Default</label>
-                  <input
-                    type="number"
-                    value={ctVarDefault}
-                    onChange={e => setCtVarDefault(parseInt(e.target.value) || 0)}
-                    className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Unit</label>
-                  <input
-                    type="text"
-                    value={ctVarUnit}
-                    onChange={e => setCtVarUnit(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-                    placeholder="e.g., d (for dice)"
-                  />
-                </div>
+            {ctCategory === '__other__' && (
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Custom Category</label>
+                <input
+                  type="text"
+                  value={ctCustomCategory}
+                  onChange={e => setCtCustomCategory(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                  placeholder="Enter category name"
+                />
               </div>
             )}
+          </div>
+
+          {/* Mechanics section */}
+          <div className="space-y-2">
+            <h5 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Mechanics</h5>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Effect</label>
+              <textarea
+                value={ctEffect}
+                onChange={e => setCtEffect(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                placeholder="Mechanical effect. Use {x} for the variable value, e.g., +{x} damage per Raise"
+                rows={2}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Description</label>
+              <textarea
+                value={ctDescription}
+                onChange={e => setCtDescription(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                placeholder="Lore or narrative description (optional)"
+                rows={2}
+              />
+            </div>
+
+            {/* Variable toggle */}
+            <div className="border-t border-slate-600 pt-2 space-y-2">
+              <label className="flex items-center gap-2 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={ctHasVariable}
+                  onChange={e => setCtHasVariable(e.target.checked)}
+                />
+                Accepts a variable value (X)
+              </label>
+              {ctHasVariable && (
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Min</label>
+                    <input
+                      type="number"
+                      value={ctVarMin}
+                      onChange={e => setCtVarMin(parseInt(e.target.value) || 0)}
+                      className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Max</label>
+                    <input
+                      type="number"
+                      value={ctVarMax}
+                      onChange={e => setCtVarMax(parseInt(e.target.value) || 0)}
+                      className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Default</label>
+                    <input
+                      type="number"
+                      value={ctVarDefault}
+                      onChange={e => setCtVarDefault(parseInt(e.target.value) || 0)}
+                      className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Unit</label>
+                    <input
+                      type="text"
+                      value={ctVarUnit}
+                      onChange={e => setCtVarUnit(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+                      placeholder="e.g., d (for dice)"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <button
