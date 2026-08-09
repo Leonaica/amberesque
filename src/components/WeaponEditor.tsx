@@ -2,15 +2,16 @@ import { useState } from 'react';
 import type { 
   AspectName, AttackType, WeaponAttack, CharacterWeapon, WeaponCapacity, WeaponCategory, WeaponHandedness, 
   WeaponRange, WeaponReloadTime, WeaponTagDefinition, WeaponTagRef } from '../types/character';
-import { ASPECTS, ATTACK_TYPES_BY_ASPECT, WEAPON_RANGES, getMechanismGroupsForAspect } from '../types/character';
+import { ASPECTS, ATTACK_TYPES_BY_ASPECT, WEAPON_RANGES, getAttackTypesForAspect } from '../types/character';
 import { DAMAGE_MAGNITUDE_TABLE, type DamageMagnitudeEntry } from '../data/damageTable';
 import { WEAPON_CAPACITY_OPTIONS, WEAPON_CATEGORY_GROUPS, WEAPON_RELOAD_TIME_OPTIONS, 
-  DEFAULT_ATTACK_BY_CATEGORY, DEFAULT_HANDEDNESS_BY_CATEGORY, MECHANISM_LABELS } from '../data/weaponData';
+  DEFAULT_ATTACK_BY_CATEGORY, DEFAULT_HANDEDNESS_BY_CATEGORY, 
+  ATTACK_TYPE_LABELS} from '../data/weaponData';
 import StepperInput from './StepperInput';
 import { WeaponTagEditor } from './WeaponTagEditor';
 import { normalizeTagRefs, idsToRefs } from '../data/weaponTags';
 
-const RANGED_CATEGORIES: WeaponCategory[] = ['Pistol', 'Gun', 'Heavy', 'Mounted'];
+const RANGED_CATEGORIES: WeaponCategory[] = ['Pistol', 'Ranged', 'Heavy', 'Mounted'];
 
 interface WeaponEditorProps {
   weapon?: CharacterWeapon;
@@ -326,12 +327,8 @@ export function WeaponEditor({ weapon, customTags, onSave, onCancel }: WeaponEdi
                   onChange={(e) => updateAttack(attack.id, { type: e.target.value as AttackType })}
                   className="w-full bg-slate-600 border border-slate-500 rounded px-2 py-1 text-sm"
                 >
-                  {Object.entries(getMechanismGroupsForAspect(attack.aspect)).map(([mechanism, types]) => (
-                    <optgroup key={mechanism} label={MECHANISM_LABELS[mechanism]}>
-                      {(types as string[]).map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </optgroup>
+                  {getAttackTypesForAspect(attack.aspect).map(t => (
+                    <option key={t} value={t} title={ATTACK_TYPE_LABELS[t]}>{t}</option>
                   ))}
                 </select>
               </div>

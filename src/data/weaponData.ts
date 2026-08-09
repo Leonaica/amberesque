@@ -1,9 +1,8 @@
 import type { AspectName, AttackType, WeaponCapacity, WeaponCategory, WeaponHandedness, WeaponReloadTime } from '../types/character';
 
 export const WEAPON_CATEGORY_GROUPS: Record<string, WeaponCategory[]> = {
-  'Physical Weapons': ['Melee', 'Pistol', 'Gun', 'Primitive', 'Heavy', 'Mounted', 'Thrown'],
+  'Physical Weapons': ['Melee', 'Pistol', 'Ranged', 'Heavy', 'Mounted', 'Thrown'],
   'Natural Attacks': ['Natural', 'Unarmed'],
-  'Powers': ['Spell', 'Innate', 'Psionics'],
 };
 
 export const WEAPON_CAPACITY_OPTIONS: { value: WeaponCapacity; label: string; description: string }[] = [
@@ -25,8 +24,7 @@ export const WEAPON_RELOAD_TIME_OPTIONS: { value: WeaponReloadTime; label: strin
 export const DEFAULT_HANDEDNESS_BY_CATEGORY: Record<WeaponCategory, WeaponHandedness> = {
   Melee: 'One-handed',
   Pistol: 'One-handed',
-  Gun: 'Two-handed',
-  Primitive: 'One-handed',
+  Ranged: 'Two-handed',
   Heavy: 'Two-handed',
   Mounted: 'Two-handed',
   Thrown: 'One-handed',
@@ -34,58 +32,50 @@ export const DEFAULT_HANDEDNESS_BY_CATEGORY: Record<WeaponCategory, WeaponHanded
   Unarmed: 'One-handed',
   Spell: 'One-handed',
   Innate: 'Hands free',
-  Psionics: 'Hands free',
 };
 
 export const DEFAULT_ATTACK_BY_CATEGORY: Record<WeaponCategory, { aspect: AspectName; type: AttackType }> = {
   // Physical
   Melee: { aspect: 'Form', type: 'Slashing' },
   Pistol: { aspect: 'Form', type: 'Piercing' },
-  Gun: { aspect: 'Form', type: 'Piercing' },
-  Primitive: { aspect: 'Form', type: 'Bludgeoning' },
-  Heavy: { aspect: 'Form', type: 'Explosive' },
+  Ranged: { aspect: 'Form', type: 'Piercing' },
+  Heavy: { aspect: 'Form', type: 'Shockwave' },
   Mounted: { aspect: 'Form', type: 'Piercing' },
   Thrown: { aspect: 'Form', type: 'Piercing' },
   // Natural
   Natural: { aspect: 'Form', type: 'Piercing' },
-  Unarmed: { aspect: 'Form', type: 'Bludgeoning' },
+  Unarmed: { aspect: 'Form', type: 'Distortion' },
   // Magic
-  Spell: { aspect: 'Form', type: 'Fire' },
-  Innate: { aspect: 'Form', type: 'Fire' },
-  Psionics: { aspect: 'Mind', type: 'Overload' },
+  Spell: { aspect: 'Form', type: 'Annihilation' },
+  Innate: { aspect: 'Form', type: 'Annihilation' },
 };
 
-export const MECHANISM_LABELS: Record<string, string> = {
+export const ATTACK_TYPE_LABELS: Record<AttackType, string> = {
   // Form
-  Removal: 'Removal — Consuming, dissolving, stripping',
-  Severance: 'Severance — Cutting, puncturing',
-  Distortion: 'Distortion — Warping, crushing, reshaping',
-  Fragmentation: 'Fragmentation — Breaking into pieces',
-  StateDisruption: 'State Disruption — Altering material properties',
-  Resonance: 'Resonance — Oscillation, pressure waves',
+  Annihilation: 'Annihilation — Destroying material through disintegrating, dissolving, melting, or burning',
+  Slashing: 'Slashing — Cutting through structural connections to open flesh or sever components',
+  Piercing: 'Piercing — Puncturing deep channels through structural connections',
+  Distortion: 'Distortion — Warping, crushing, or reshaping without removing material',
+  Shockwave: 'Shockwave — Destroying structure through catastrophic pressure waves',
   // Flesh
-  ChemicalDisruption: 'Chemical Disruption — Poisons, toxins',
-  BiologicalInvasion: 'Biological Invasion — Diseases, parasites',
-  FluidDisruption: 'Fluid Disruption — Blood, moisture',
-  RespirationDisruption: 'Respiration Disruption — Breath, suffocation',
-  EnergyDisruption: 'Energy Disruption — Electricity, radiation, temperature',
-  SystemFailure: 'System Failure — Shutdowns, paralysis',
-  Degeneration: 'Degeneration — Decay, aging, transformation',
+  Poisoning: 'Poisoning — Foreign substances interfering with biological processes',
+  Infection: 'Infection — External organisms attacking from within',
+  Asphyxiation: 'Asphyxiation — Denying oxygen or gas exchange without chemical interference',
+  Burnout: 'Burnout — Breaking cells through energy overload or thermal extremes',
+  Decay: 'Decay — Accelerating breakdown or transformation of living tissue',
   // Mind
-  MemoryDamage: 'Memory Damage — Erasing, altering memories',
-  ReasoningDamage: 'Reasoning Damage — Logic, confusion',
-  PerceptionDamage: 'Perception Damage — Illusions, hallucinations',
-  WillDamage: 'Will Damage — Control, compulsion',
-  FocusDamage: 'Focus Damage — Overload, fatigue',
-  IdentityDamage: 'Identity Damage — Self, continuity',
+  Shattering: 'Shattering — Mental fortitude (Willpower) broken by psychic assault, terror, torture, or overwhelming pressure',
+  Degradation: 'Degradation — Processing capacity (Intelligence) degraded by neuron damage, logic corruption, or cognitive overload',
+  Erasure: 'Erasure — Stored data (Memory) erased, scrambled, or overwritten',
+  Dissolution: 'Dissolution — Mental presence and identity (Charisma) dissolved or fragmented',
+  Subversion: 'Subversion — Hijacking the mind without damaging it',
   // Spirit
-  HopeDamage: 'Hope Damage — Despair, apathy',
-  ConnectionDamage: 'Connection Damage — Bonds, relationships',
-  IdentityCorruption: 'Identity Corruption — Twisting the self',
-  EnergyDrain: 'Energy Drain — Consuming essence',
-  Burden: 'Burden — Curses, obligations',
-  Violation: 'Violation — Defiling, profaning',
-  FaithDamage: 'Faith Damage — Belief, conviction',
+  Despair: 'Despair — Corroding the will to continue and find meaning',
+  Severing: 'Severing — Cutting the connection between body and soul',
+  Corruption: 'Corruption — Twisting or displacing the essential self',
+  Unmaking: 'Unmaking — Consuming spiritual essence directly, annihilating the soul',
+  Desecration: 'Desecration — Defiling the sacred or profaning essence',
+  Doubt: 'Doubt — Destroying belief systems and conviction',
 };
 
 export function formatCapacity(capacity?: { min: WeaponCapacity; max?: WeaponCapacity }): string {

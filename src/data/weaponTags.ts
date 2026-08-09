@@ -11,6 +11,13 @@ export const WEAPON_TAG_CATEGORIES = [
 export const WEAPON_TAG_LIBRARY: WeaponTagDefinition[] = [
   // === Inherent ===
   {
+    id: 'tag-strength-bonus',
+    label: 'Strength Bonus',
+    category: 'Inherent',
+    description: 'Damage depends in part on the Strength of the user',
+    effect: 'Add the wielder\'s Strength Rank as a Damage Modifier',
+  },
+  {
     id: 'tag-defensive',
     label: 'Defensive',
     category: 'Inherent',
@@ -330,16 +337,11 @@ export const WEAPON_TAG_LIBRARY: WeaponTagDefinition[] = [
     effect: 'Target cannot use Surge for 1 round after being hit',
   },
   {
-    id: 'tag-blessed',
-    label: 'Blessed',
+    id: 'tag-reloading',
+    label: 'Self Loading',
     category: 'Enchantment',
-    effect: 'Brings fortune; wielder can choose to re-roll one action with this weapon perscene, but must then take the second roll',
-  },
-  {
-    id: 'tag-cursed',
-    label: 'Cursed',
-    category: 'Enchantment',
-    effect: 'Brings misfortune of some sort; cannot be discarded willingly',
+    description: 'Weapon reloads/recharges automatically',
+    effect: 'The reloading action takes place by itself at the weapon\'s reload rate',
   },
   // Concussive — update to cover Knockdown (merged)
   {
