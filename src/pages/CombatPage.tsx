@@ -52,15 +52,14 @@ function DamageSpread({ probabilities }: { probabilities: WoundProbabilities }) 
           const isMax = w.prob === maxProb && w.prob > 0.001;
           const hasProb = w.prob > 0.001;
           const pct = w.prob * 100;
-          
+
           return (
             <div
               key={w.key}
-              className={`flex-1 rounded px-0.5 py-0.5 text-center ${
-                isMax ? `ring-1 ring-amber-400 ${w.bgClass}` :
-                hasProb ? w.bgClass :
-                'opacity-20'
-              }`}
+              className={`flex-1 rounded px-0.5 py-0.5 text-center ${isMax ? `ring-1 ring-amber-400 ${w.bgClass}` :
+                  hasProb ? w.bgClass :
+                    'opacity-20'
+                }`}
             >
               <div className="text-xs leading-none">{w.emoji}</div>
               <div className={`text-[8px] mt-0.5 leading-tight ${hasProb ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -86,14 +85,14 @@ export function CombatPage() {
 
   // Combat mode
   const [combatMode, setCombatMode] = useState<'attacker' | 'defender'>(state?.mode || 'attacker');
-  
+
   // Weapon selection
   const [selectedWeaponId, setSelectedWeaponId] = useState<string>(state?.weaponId || '');
   const [selectedAttackIndex, setSelectedAttackIndex] = useState(state?.attackIndex || 0);
-  
+
   // Compute initial attack values from weapon
-  const initialWeapon = state?.weaponId 
-    ? character.weapons.find(w => w.id === state.weaponId) 
+  const initialWeapon = state?.weaponId
+    ? character.weapons.find(w => w.id === state.weaponId)
     : null;
   const initialAttackIndex = state?.attackIndex ?? 0;
   const initialAttack = initialWeapon?.attacks[initialAttackIndex];
@@ -106,14 +105,15 @@ export function CombatPage() {
     initialAttack?.magnitude || gameState.opponentCombatData.attackMagnitude
   );
   const [attackPenetration, setAttackPenetration] = useState<number>(
-    initialAttack 
-      ? (Array.isArray(initialAttack.penetration) ? initialAttack.penetration[0] : initialAttack.penetration) 
+    initialAttack
+      ? (Array.isArray(initialAttack.penetration) ? initialAttack.penetration[0] : initialAttack.penetration)
       : gameState.opponentCombatData.attackPenetration
   );
+  const [successes, setSuccesses] = useState(1);
   const [damageModifier, setDamageModifier] = useState(
     gameState.opponentCombatData.damageModifier
   );
-  
+
   // Defender values
   const [customResistanceRank, setCustomResistanceRank] = useState<number | null>(null);
   const [customArmor, setCustomArmor] = useState<number | null>(null);
@@ -122,10 +122,10 @@ export function CombatPage() {
   const [resistanceModifier, setResistanceModifier] = useState(
     gameState.opponentCombatData.resistanceModifier
   );
-  
+
   // Target selection
   const applyToOpponent = combatMode === 'attacker';
-  
+
   // Results
   const [damageResult, setDamageResult] = useState<DamageResult | null>(null);
 
@@ -152,37 +152,37 @@ export function CombatPage() {
 
   const isPlayerDefender = combatMode === 'defender';
   const resistanceAttr = getResistanceAttribute(attackedAspect);
-  
+
   // Resistance rank
   const baseResistanceRank = isPlayerDefender
     ? character.attributeDiePools[resistanceAttr].rank
     : gameState.opponentCombatData.resistanceRanks[resistanceAttr as keyof typeof gameState.opponentCombatData.resistanceRanks];
   const resistanceRank = customResistanceRank !== null ? customResistanceRank : baseResistanceRank;
-  
+
   // Size values
-  const materialSize = customMaterialSize !== null 
-    ? customMaterialSize 
-    : isPlayerDefender 
-      ? character.size 
+  const materialSize = customMaterialSize !== null
+    ? customMaterialSize
+    : isPlayerDefender
+      ? character.size
       : gameState.opponentCombatData.materialSize;
-  const immaterialSize = customImmaterialSize !== null 
-    ? customImmaterialSize 
-    : isPlayerDefender 
-      ? character.immaterialSize 
+  const immaterialSize = customImmaterialSize !== null
+    ? customImmaterialSize
+    : isPlayerDefender
+      ? character.immaterialSize
       : gameState.opponentCombatData.immaterialSize;
 
   const isPhysicalAspect = attackedAspect === 'Form' || attackedAspect === 'Flesh';
   const effectiveSize = isPhysicalAspect ? materialSize : immaterialSize;
-  
+
   // Size modifier for resistance calculations
   const effectiveSizeModifier = effectiveSize * 4;
-  
+
   // Armor - from selected piece, opponent data, or manual entry
   const baseArmorValue = isPlayerDefender
-  ? (selectedArmorPiece && selectedArmorPiece.aspects.includes(attackedAspect as ArmorAspect)
+    ? (selectedArmorPiece && selectedArmorPiece.aspects.includes(attackedAspect as ArmorAspect)
       ? selectedArmorPiece.armor
       : 0)
-  : gameState.opponentCombatData.armor[resistanceAttr as keyof typeof gameState.opponentCombatData.armor];
+    : gameState.opponentCombatData.armor[resistanceAttr as keyof typeof gameState.opponentCombatData.armor];
   const armorValue = customArmor !== null ? customArmor : baseArmorValue;
 
   // Total resistance
@@ -191,16 +191,20 @@ export function CombatPage() {
   // Effective armor
   const effectiveArmor = Math.max(0, armorValue - attackPenetration);
 
+  // Derived damage modifier from successes (raises)
+  const successesDamageModifier = (successes - 1) * 4;
+  const totalDamageModifier = damageModifier + successesDamageModifier;
+
   // Calculate wound probabilities
   const woundProbabilities = useMemo(() => {
     return calculateWoundProbabilities({
       weaponMagnitude: attackMagnitude,
-      damageModifier,
+      damageModifier: totalDamageModifier,
       resistance: totalResistance,
       armor: armorValue,
       penetration: attackPenetration,
     });
-  }, [attackMagnitude, damageModifier, totalResistance, armorValue, attackPenetration]);
+  }, [attackMagnitude, totalDamageModifier, totalResistance, armorValue, attackPenetration]);
 
   // Handlers
   const handleAspectChange = (aspect: AspectName) => {
@@ -248,7 +252,7 @@ export function CombatPage() {
       resistanceRank: resistanceRank,
       sizeModifier: effectiveSizeModifier,
       armorValue,
-      damageModifier,
+      damageModifier: totalDamageModifier,
       resistanceModifier,
     });
     setDamageResult(result);
@@ -256,12 +260,12 @@ export function CombatPage() {
 
   const handleApplyDamage = () => {
     if (!damageResult) return;
-    const currentLevel = applyToOpponent 
+    const currentLevel = applyToOpponent
       ? gameState.opponentWounds[attackedAspect] as WoundLevel
       : gameState.wounds[attackedAspect] as WoundLevel;
     const newLevel = damageResult.woundLevel;
     const { resultingLevel } = calculateStacking(currentLevel, newLevel);
-    
+
     if (applyToOpponent) {
       gameState.setOpponentWound(attackedAspect, resultingLevel);
     } else {
@@ -324,16 +328,15 @@ export function CombatPage() {
   const renderWoundBadge = (level: number) => {
     const wl = WOUND_LABELS[level as WoundLevel] || WOUND_LABELS[0];
     return (
-      <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-xs font-medium ${
-        level === 0 ? 'bg-slate-700 text-slate-400' :
-        level <= 2 ? 'bg-green-900/50 text-green-400' :
-        level === 3 ? 'bg-yellow-900/50 text-yellow-400' :
-        level === 4 ? 'bg-orange-900/50 text-orange-400' :
-        level === 5 ? 'bg-red-900/50 text-red-400' :
-        level === 6 ? 'bg-red-800/50 text-red-300' :
-        level === 7 ? 'bg-red-900/70 text-red-200' :
-        'bg-red-950/70 text-red-100'
-      }`}>
+      <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-xs font-medium ${level === 0 ? 'bg-slate-700 text-slate-400' :
+          level <= 2 ? 'bg-green-900/50 text-green-400' :
+            level === 3 ? 'bg-yellow-900/50 text-yellow-400' :
+              level === 4 ? 'bg-orange-900/50 text-orange-400' :
+                level === 5 ? 'bg-red-900/50 text-red-400' :
+                  level === 6 ? 'bg-red-800/50 text-red-300' :
+                    level === 7 ? 'bg-red-900/70 text-red-200' :
+                      'bg-red-950/70 text-red-100'
+        }`}>
         {wl.emoji} {wl.label}
       </span>
     );
@@ -372,21 +375,19 @@ export function CombatPage() {
             <div className="flex gap-1">
               <button
                 onClick={() => handleModeSwitch('attacker')}
-                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                  combatMode === 'attacker'
+                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${combatMode === 'attacker'
                     ? 'bg-red-600 text-white'
                     : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                }`}
+                  }`}
               >
                 🗡️ Attack
               </button>
               <button
                 onClick={() => handleModeSwitch('defender')}
-                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                  combatMode === 'defender'
+                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${combatMode === 'defender'
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                }`}
+                  }`}
               >
                 🛡️ Defend
               </button>
@@ -413,7 +414,7 @@ export function CombatPage() {
 
       {/* Main Layout: Attacker left, Defender+Results right */}
       <div className="grid lg:grid-cols-5 gap-2">
-        
+
         {/* LEFT: Attacker Config */}
         <div className="lg:col-span-2 bg-slate-800 rounded p-2 space-y-2">
           <div className="flex items-center justify-between">
@@ -457,11 +458,10 @@ export function CombatPage() {
                       <button
                         key={attack.id}
                         onClick={() => handleAttackModeSelect(idx)}
-                        className={`px-2 py-0.5 rounded text-xs transition-colors ${
-                          selectedAttackIndex === idx
+                        className={`px-2 py-0.5 rounded text-xs transition-colors ${selectedAttackIndex === idx
                             ? 'bg-amber-500 text-slate-900 font-medium'
                             : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        }`}
+                          }`}
                       >
                         {ASPECTS.find(a => a.id === attack.aspect)?.emoji} {attack.magnitude}
                         {attack.isConditional && ' ⚠️'}
@@ -477,11 +477,11 @@ export function CombatPage() {
                 if (refs.length === 0) return null;
 
                 const resolvedTags = refs
-                .map(ref => {
-                  const r = resolveTagRef(ref, character.customTags);
-                  return r ? { ref, def: r.def, x: ref.x ?? r.def.variable?.default } : null;
-                })
-                .filter((t): t is { ref: WeaponTagRef; def: WeaponTagDefinition; x: number | undefined } => t !== null);
+                  .map(ref => {
+                    const r = resolveTagRef(ref, character.customTags);
+                    return r ? { ref, def: r.def, x: ref.x ?? r.def.variable?.default } : null;
+                  })
+                  .filter((t): t is { ref: WeaponTagRef; def: WeaponTagDefinition; x: number | undefined } => t !== null);
 
                 if (resolvedTags.length === 0) return null;
 
@@ -515,7 +515,7 @@ export function CombatPage() {
           {/* Attack Fields */}
           <div className="bg-slate-700/50 rounded p-2 space-y-2">
             <div className="text-[10px] text-slate-500 italic">
-              {isPlayerDefender 
+              {isPlayerDefender
                 ? "Enter opponent's attack values."
                 : "Edit for special circumstances."
               }
@@ -528,11 +528,10 @@ export function CombatPage() {
                   <button
                     key={aspect.id}
                     onClick={() => handleAspectChange(aspect.id)}
-                    className={`px-2 py-1 rounded text-xs transition-colors ${
-                      attackAspect === aspect.id
+                    className={`px-2 py-1 rounded text-xs transition-colors ${attackAspect === aspect.id
                         ? 'bg-amber-500 text-slate-900 font-medium'
                         : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
-                    }`}
+                      }`}
                   >
                     {aspect.emoji} {aspect.name}
                   </button>
@@ -573,6 +572,30 @@ export function CombatPage() {
                 className="text-white"
               />
             </div>
+
+            <div>
+             <label className="block text-xs text-slate-400 mb-0.5">
+               Attack Result: # Successes
+               <span className="text-[9px] text-slate-500 ml-1">(raises add +4 dmg each)</span>
+             </label>
+             <div className="flex items-center justify-between">
+               <StepperInput
+                 value={successes}
+                 onChange={(delta) => {
+                   const newVal = Math.min(Math.max(successes + delta, 1), 20);
+                   setSuccesses(newVal);
+                 }}
+                 min={1}
+                 max={20}
+                 className={successes > 1 ? 'text-green-400' : 'text-white'}
+               />
+               {successes > 1 && (
+                 <span className="text-[10px] text-green-400">
+                   +{successesDamageModifier} dmg
+                 </span>
+               )}
+             </div>
+           </div>
 
             <div>
               <label className="block text-xs text-slate-400 mb-0.5">Damage Modifier</label>
@@ -628,17 +651,16 @@ export function CombatPage() {
                     return (
                       <div
                         key={aspect.id}
-                        className={`rounded px-1 py-1 text-center ${
-                          isAttacked 
-                            ? 'ring-2 ring-amber-400 bg-slate-600/50' 
-                            : woundLevel === 0 
-                              ? 'bg-slate-700/30' 
-                              : woundLevel <= 2 
-                                ? 'bg-green-900/20' 
-                                : woundLevel <= 4 
-                                  ? 'bg-orange-900/20' 
+                        className={`rounded px-1 py-1 text-center ${isAttacked
+                            ? 'ring-2 ring-amber-400 bg-slate-600/50'
+                            : woundLevel === 0
+                              ? 'bg-slate-700/30'
+                              : woundLevel <= 2
+                                ? 'bg-green-900/20'
+                                : woundLevel <= 4
+                                  ? 'bg-orange-900/20'
                                   : 'bg-red-900/20'
-                        }`}
+                          }`}
                       >
                         <div className="text-xs">{aspect.emoji}</div>
                         <div className="text-[10px] text-slate-400">{aspect.name}</div>
@@ -700,11 +722,11 @@ export function CombatPage() {
                     toggle={
                       isPlayerDefender
                         ? {
-                            isCustom: customResistanceRank !== null,
-                            onToggle: () => setCustomResistanceRank(customResistanceRank === null ? baseResistanceRank : null),
-                            customLabel: 'C',
-                            defaultLabel: 'S',
-                          }
+                          isCustom: customResistanceRank !== null,
+                          onToggle: () => setCustomResistanceRank(customResistanceRank === null ? baseResistanceRank : null),
+                          customLabel: 'C',
+                          defaultLabel: 'S',
+                        }
                         : undefined
                     }
                   />
@@ -787,17 +809,17 @@ export function CombatPage() {
                     toggle={
                       isPlayerDefender
                         ? {
-                            isCustom: isPhysicalAspect ? customMaterialSize !== null : customImmaterialSize !== null,
-                            onToggle: () => {
-                              if (isPhysicalAspect) {
-                                setCustomMaterialSize(customMaterialSize === null ? character.size : null);
-                              } else {
-                                setCustomImmaterialSize(customImmaterialSize === null ? character.immaterialSize : null);
-                              }
-                            },
-                            customLabel: 'C',
-                            defaultLabel: 'S',
-                          }
+                          isCustom: isPhysicalAspect ? customMaterialSize !== null : customImmaterialSize !== null,
+                          onToggle: () => {
+                            if (isPhysicalAspect) {
+                              setCustomMaterialSize(customMaterialSize === null ? character.size : null);
+                            } else {
+                              setCustomImmaterialSize(customImmaterialSize === null ? character.immaterialSize : null);
+                            }
+                          },
+                          customLabel: 'C',
+                          defaultLabel: 'S',
+                        }
                         : undefined
                     }
                   />
@@ -810,12 +832,12 @@ export function CombatPage() {
 
               {/* Armor */}
               <div className="bg-slate-700/50 rounded p-2 space-y-1">
-              <div className="text-[10px] text-slate-400 font-medium">
-                Armor vs {attackedAspect}
-                {isPlayerDefender && selectedArmorPiece && selectedArmorPiece.aspects.includes(attackedAspect as ArmorAspect) && (
-                  <span className="text-cyan-400 ml-1">({selectedArmorPiece.name})</span>
-                )}
-              </div>
+                <div className="text-[10px] text-slate-400 font-medium">
+                  Armor vs {attackedAspect}
+                  {isPlayerDefender && selectedArmorPiece && selectedArmorPiece.aspects.includes(attackedAspect as ArmorAspect) && (
+                    <span className="text-cyan-400 ml-1">({selectedArmorPiece.name})</span>
+                  )}
+                </div>
                 <StepperInput
                   value={armorValue}
                   onChange={(delta) => {
@@ -836,11 +858,11 @@ export function CombatPage() {
                   toggle={
                     isPlayerDefender
                       ? {
-                          isCustom: customArmor !== null,
-                          onToggle: () => setCustomArmor(customArmor === null ? baseArmorValue : null),
-                          customLabel: 'C',
-                          defaultLabel: 'S',
-                        }
+                        isCustom: customArmor !== null,
+                        onToggle: () => setCustomArmor(customArmor === null ? baseArmorValue : null),
+                        customLabel: 'C',
+                        defaultLabel: 'S',
+                      }
                       : undefined
                   }
                 />
@@ -884,6 +906,18 @@ export function CombatPage() {
                   </span>
                 </div>
 
+                {successes > 1 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Successes ({successes}):</span>
+                    <span className="text-green-400">
+                      +{successesDamageModifier}
+                      <span className="text-slate-500 ml-1 text-[10px]">
+                        ({successes - 1} raise{successes - 1 > 1 ? 's' : ''} × 4)
+                      </span>
+                    </span>
+                  </div>
+                )}
+
                 {damageResult.damageModifier !== 0 && (
                   <div className="flex justify-between">
                     <span className="text-slate-400">Dmg Mod:</span>
@@ -907,7 +941,7 @@ export function CombatPage() {
                     <span className="text-slate-500 ml-1 text-[10px]">
                       (R{damageResult.resistanceBreakdown.rank}
                       {damageResult.resistanceBreakdown.size !== 0 && (
-                        <> {damageResult.resistanceBreakdown.size > 0 ? '+' : ''}{damageResult.resistanceBreakdown.size}</> 
+                        <> {damageResult.resistanceBreakdown.size > 0 ? '+' : ''}{damageResult.resistanceBreakdown.size}</>
                       )}
                       {damageResult.resistanceBreakdown.modifier !== 0 && (
                         <> {damageResult.resistanceBreakdown.modifier > 0 ? '+' : ''}{damageResult.resistanceBreakdown.modifier}</>
@@ -935,14 +969,13 @@ export function CombatPage() {
               </div>
 
               {/* Wound Level */}
-              <div className={`rounded p-2 text-center ${
-                damageResult.woundLevel <= 1 ? 'bg-slate-700/50 border border-slate-600' :
-                damageResult.woundLevel === 2 ? 'bg-green-900/30 border border-green-500/50' :
-                damageResult.woundLevel === 3 ? 'bg-yellow-900/30 border border-yellow-500/50' :
-                damageResult.woundLevel === 4 ? 'bg-orange-900/30 border border-orange-500/50' :
-                damageResult.woundLevel === 5 ? 'bg-red-900/30 border border-red-500/50' :
-                'bg-red-950/50 border border-red-500/50'
-              }`}>
+              <div className={`rounded p-2 text-center ${damageResult.woundLevel <= 1 ? 'bg-slate-700/50 border border-slate-600' :
+                  damageResult.woundLevel === 2 ? 'bg-green-900/30 border border-green-500/50' :
+                    damageResult.woundLevel === 3 ? 'bg-yellow-900/30 border border-yellow-500/50' :
+                      damageResult.woundLevel === 4 ? 'bg-orange-900/30 border border-orange-500/50' :
+                        damageResult.woundLevel === 5 ? 'bg-red-900/30 border border-red-500/50' :
+                          'bg-red-950/50 border border-red-500/50'
+                }`}>
                 <div className="text-2xl">{damageResult.woundEmoji}</div>
                 <div className="text-base font-bold text-white">{damageResult.woundLabel}</div>
                 {damageResult.woundPenalty < 0 && (
@@ -952,8 +985,8 @@ export function CombatPage() {
 
               {/* Stacking Preview */}
               {(() => {
-                const currentLevel = (applyToOpponent 
-                  ? gameState.opponentWounds[attackedAspect] 
+                const currentLevel = (applyToOpponent
+                  ? gameState.opponentWounds[attackedAspect]
                   : gameState.wounds[attackedAspect]) as WoundLevel;
                 const newLevel = damageResult.woundLevel;
                 const { resultingLevel, description } = calculateStacking(currentLevel, newLevel);
@@ -974,11 +1007,10 @@ export function CombatPage() {
                     {isWorse && (
                       <button
                         onClick={handleApplyDamage}
-                        className={`w-full mt-1.5 py-1.5 rounded text-xs font-medium transition-colors ${
-                          applyToOpponent
+                        className={`w-full mt-1.5 py-1.5 rounded text-xs font-medium transition-colors ${applyToOpponent
                             ? 'bg-red-600 hover:bg-red-500 text-white'
                             : 'bg-blue-600 hover:bg-blue-500 text-white'
-                        }`}
+                          }`}
                       >
                         Apply to {applyToOpponent ? 'Opponent' : 'Self'} {ASPECTS.find(a => a.id === attackedAspect)?.emoji} {attackedAspect}
                       </button>

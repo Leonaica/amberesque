@@ -413,7 +413,7 @@ export interface WeaponTagDefinition {
   category: string;
   description?: string;
   effect?: string;
-  variable?: WeaponTagVariable;   // NEW
+  variable?: WeaponTagVariable; 
 }
 
 /**
